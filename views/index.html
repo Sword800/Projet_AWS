@@ -1,108 +1,202 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
-    <title>Shake the Snake</title>
+    <title>Jeu de Dames</title>
+    <link rel="stylesheet" href="/style.css">
   </head>
   <body>
-    <canvas id="canvas" width="600" height="600" style="display: none;"></canvas>
+    <div id="gameboard" >    
+      
+    </div>
+    
     <h1>
       Who is online ?
     </h1>
+    
     <ul id="userlist">
     </ul>
+    
     <a href="/logout">Logout</a>
     
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
+      
+      var board = [];
+      
+      for(var i = 0;i <10;i++)
+{
+  board[i] = [];
+  
+  for(var j = 0; j <10;j++)
+  {
+    board [i][j] = 0; 
+  }
+}
+       
       $(function () {
-        let socket = io({query: { pseudo: "{{ pseudo }}", token: "{{ token }}" }});
+        var socket = io({query: { pseudo: "{{ pseudo }}", token: "{{ token }}" }});
           
-        $('html').keydown(function(e){
-          e.preventDefault(); // prevents page reloading
-          let val = 0
-          if(e.which == 37)
-            val = 'left'
-          //if(e.which == 38)
-          //  val = 'up'
-          if(e.which == 39)
-            val = 'right'
-          //if(e.which == 40)
-          //  val = 'down'
-          
-          if(val != 0)
-            socket.emit('keypress', {from: "{{ pseudo }}", key: val});
-          return false;
-        });
-        
-        socket.on('user_list', function(msg){
-          l = ""
-          for(i = 0; i < msg.list.length; i++){
-            l += "<li>"
-            l += msg.list[i].pseudo
-            l += " Win : "
-            l += msg.list[i].win
-            l += " Lose : "
-            l += msg.list[i].lose
-            l += " "
-            if(msg.list[i].pseudo == "{{ pseudo }}")
-              l += " (you)"
-            else
-              l += "<button id=" + msg.list[i].pseudo + "> Challenge </button>"
-            l += "</li>"
-          }
-          $("#userlist").empty()
-          $(l).appendTo("#userlist");
-          $('button').click(function(event){
-            socket.emit('challenge', {from: "{{ pseudo }}",
-                                      to: event.target.id});
-            $("button").attr("disabled", true);
-            $(event.target).css('background-color', 'blue')
-          });
-        });
-        socket.on('challenge', function(event){
-          console.log(event.from)
-          if(confirm(event.from + " has challenged you !")){
-            socket.emit('accepted', {from: "{{ pseudo }}",
-                                     to: event.from})
-          } else {
-            socket.emit('declined', {from: "{{ pseudo }}",
-                                     to: event.from})
-          }
-        });
-        socket.on('accepted', function(event){
-          alert(event.from + " has accepted the challenge !")
-          $("button").attr("disabled", false);
-          $(event.target).css('background-color', 'gray')
-        });
-        socket.on('declined', function(event){
-          alert(event.from + " has declined the challenge !")
-          $("button").attr("disabled", false);
-        });
-        socket.on('createGame', function(event){
-          $("#userlist").hide()
-          $("h1").hide()
-          $("a").hide()
-          let can = document.getElementById("canvas")
-          hdc = can.getContext('2d');
-
-          hdc.strokeStyle = 'red';
-          hdc.lineWidth = 2;
-
-          // Fill the path
-          hdc.fillStyle = "green";
-          hdc.fillRect(0,0,600,600);
-          can.style.opacity = '0.2';
-          
-          hdc.lineWidth = 5;
-          hdc.beginPath();
-          hdc.moveTo(0, 0);
-          hdc.lineTo(300, 150);
-          hdc.stroke();
-          
-          $("#canvas").show()
-        });
+        key(socket);
+        interaction(socket);
+        challenge(socket);
+        accepte(socket);
+        decline(socket);
+        render(socket);
       });
+      
+function key(socket)
+{
+  $('html').keydown(function(e){
+  e.preventDefault(); // prevents page reloading
+  
+  let val = 0;
+  
+  if(e.which == 37)
+  {
+    val = 'left';
+  }
+            
+//if(key.which == 38)
+//{
+  //val = 'up';
+//}
+  
+  if(e.which == 39)
+  {
+    val = 'right';
+  }
+           
+//if(key.which == 40)
+//{  
+  //val = 'down';
+//}
+          
+  if(val != 0)
+  {
+    socket.emit('keypress', {from: "{{ pseudo }}", key: val});
+  }
+  
+  return false;
+});
+};
+
+function interaction(socket)
+{
+  socket.on('user_list',function(msg){
+    l = "";
+          
+  for(i = 0; i < msg.list.length; i++)
+  {
+    l += "<li>";
+    l += msg.list[i].pseudo;
+    l += " Win : ";
+    l += msg.list[i].win;
+    l += " Lose : ";
+    l += msg.list[i].lose;
+    l += " ";
+    
+    if(msg.list[i].pseudo == "{{ pseudo }}")
+    {
+     l += " (you)";
+    }
+    else
+    {
+     l += "<button id=" + msg.list[i].pseudo + "> Challenge </button>";
+     l += "</li>";
+    }
+             
+  }
+  
+$("#userlist").empty()
+$(l).appendTo("#userlist");
+    
+$('button').click(function(event){
+socket.emit('challenge', {from: "{{ pseudo }}",to: event.target.id});
+$("button").attr("disabled", true);
+$(event.target).css('background-color', 'blue')
+                                 });
+});
+};
+
+function challenge(socket)
+{
+  socket.on('challenge',function(event){
+  console.log(event.from);
+  
+  if(confirm(event.from + " has challenged you !"))
+  {
+    socket.emit('accepted', {from: "{{ pseudo }}",to: event.from});
+  } 
+  else 
+  {
+    socket.emit('declined', {from: "{{ pseudo }}",to: event.from});
+  }
+})
+};
+      
+function accepte(socket)
+{
+  socket.on('accepted', function(event){
+  alert(event.from + " has accepted the challenge !");
+  $("button").attr("disabled", false);
+  $(event.target).css('background-color', 'gray');
+})
+};
+        
+function decline(socket)
+{
+   socket.on('declined',function(event){
+  alert(event.from + " has declined the challenge !");
+  $("button").attr("disabled", false);      
+})
+};
+              
+function render(socket)
+{
+    socket.on('createGame', function(event){
+    $("#userlist").hide();
+    $("h1").hide();
+    $("a").hide();
+        
+    let plateau = document.getElementById("gameboard");
+        
+    plateau.innerHTML = '';
+  
+    var tableau = document.createElement('table');
+
+    plateau.appendChild(tableau);
+
+ for(var i = 0;i < 10;i++)
+ {
+
+    var tr = document.createElement('tr');
+
+    tableau.appendChild(tr);
+
+    for(var j = 0; j <10;j++)
+    {
+      var td = document.createElement('td');
+
+      if(board[i][j]==1)
+      {
+        td.className = 'player1';
+
+      }
+      if(board[i][j]==2)
+      {
+        td.className = 'player2';
+      }
+
+      tr.appendChild(td);
+
+      td.dataset.column = j;
+    }
+  }
+   
+$("#gameboard").show()
+})
+};
     </script>
   </body>
 </html>
